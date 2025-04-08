@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Women's Safety Monitoring System</title>
+    <style>
+        /* CSS remains unchanged */
+        :root {
+            --primary-color: #ff4081;
+            --secondary-color: #f06292;
+            --accent-color: #e91e63;
+            --light-color: #f8bbd0;
+            --dark-color: #880e4f;
+            --text-color: #333;
+            --white: #fff;
+            --gray: #f5f5f5;
+            --dark-gray: #e0e0e0;
+            --danger: #ff3d00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--gray);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--white);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary-color);
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            background-color: var(--light-color);
+            padding: 8px 15px;
+            border-radius: 50px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ccc;
+        }
+
+        .status-dot.active {
+            background-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+
+        main {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background-color: var(--white);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            height: fit-content;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+            border-bottom: 2px solid var(--light-color);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--dark-gray);
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-color);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #000;
+            aspect-ratio: 16/9;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .analysis-container {
+            margin-top: 20px;
+        }
+
+        .analysis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .analysis-result {
+            background-color: var(--gray);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .alert-history {
+            list-style: none;
+        }
+
+        .alert-item {
+            background-color: var(--gray);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .alert-time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .alert-message {
+            font-size: 14px;
+        }
+
+        .emergency-highlight {
+            background-color: #ffebee;
+            border-left: 4px solid var(--danger);
+            color: #c62828;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-emergency {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .badge-safe {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-message {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        /* Animation for emergency situations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .emergency-active {
+            animation: pulse 1s infinite;
+        }
+
+        .audio-status {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <h1>Women's Safety Monitoring</h1>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot" id="systemStatus"></div>
+                <span id="statusText">System Inactive</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <main>
+            <div class="left-column">
+                <div class="panel">
+                    <h2>User Information</h2>
+                    <div class="form-group">
+                        <label for="name">Your Name</label>
+                        <input type="text" id="name" placeholder="Enter your full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Your Phone Number</label>
+                        <input type="text" id="phone" placeholder="Enter your phone number">
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Your Address</label>
+                        <textarea id="address" placeholder="Enter your address"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="emergencyName">Emergency Contact Name</label>
+                        <input type="text" id="emergencyName" placeholder="Enter emergency contact name">
+                    </div>
+                    <div class="form-group">
+                        <label for="emergencyPhone">Emergency Contact Phone</label>
+                        <input type="text" id="emergencyPhone" placeholder="Enter emergency contact phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="emergencyEmail">Emergency Response Email</label>
+                        <input type="email" id="emergencyEmail" placeholder="Enter emergency response email">
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top: 20px;">
+                    <h2>Alert History</h2>
+                    <ul class="alert-history" id="alertHistory">
+                        <!-- Alert history will be populated by JavaScript -->
+                    </ul>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <div class="panel">
+                    <h2>Safety Monitoring</h2>
+                    <div class="video-container">
+                        <video id="video" autoplay muted></video>
+                    </div>
+                    <div class="video-controls">
+                        <button class="btn" id="startBtn">Start Monitoring</button>
+                        <button class="btn btn-outline" id="stopBtn" disabled>Stop Monitoring</button>
+                    </div>
+                    <div class="audio-status" id="audioStatus">Audio detection: Inactive</div>
+                    
+                    <div class="analysis-container">
+                        <div class="analysis-header">
+                            <h3>Analysis Results</h3>
+                            <div class="status-badge badge-safe" id="safetyStatus">Safe</div>
+                        </div>
+                        <div class="analysis-result" id="analysisResult">
+                            No analysis available. Start monitoring to begin analysis.
+                        </div>
+                        <div class="status-message" id="statusMessage"></div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn" id="toggleAudioBtn">Start Audio Detection</button>
+                        <button class="btn btn-outline" id="testEmailBtn">Test Emergency Alert</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global variables
+        let stream;
+        let audioStream;
+        let monitoring = false;
+        let audioActive = false;
+        let canvas = document.createElement('canvas');
+        let mediaRecorder;
+        let audioChunks = [];
+        let captureInterval;
+        let statusInterval;
+        let emergencyActive = false;
+        let frameCount = 0;
+        let audioBuffer = [];
+        let imageBuffer = [];
+        let lastImageSentTime = 0;
+        let lastAudioSentTime = 0;
+        
+        // Backend API base URL
+        const API_BASE_URL = 'http://127.0.0.1:5000/api';
+        
+        // Constants
+        const FRAMES_PER_SECOND = 24;
+        const IMAGE_SEND_INTERVAL = 1000; // 1 second
+        const AUDIO_SEND_INTERVAL = 30000; // 30 seconds
+        const MAX_BUFFER_SIZE = 30; // 30 seconds worth of data
+        
+        // DOM Elements
+        const videoElement = document.getElementById('video');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+        const testEmailBtn = document.getElementById('testEmailBtn');
+        const analysisResult = document.getElementById('analysisResult');
+        const statusDot = document.getElementById('systemStatus');
+        const statusText = document.getElementById('statusText');
+        const safetyStatus = document.getElementById('safetyStatus');
+        const statusMessage = document.getElementById('statusMessage');
+        const audioStatus = document.getElementById('audioStatus');
+        const alertHistory = document.getElementById('alertHistory');
+        
+        // Initialize geolocation variables
+        let userLatitude = null;
+        let userLongitude = null;
+        
+        // Get user location
+        function getUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLatitude = position.coords.latitude;
+                        userLongitude = position.coords.longitude;
+                        console.log("Location obtained:", userLatitude, userLongitude);
+                    },
+                    (error) => {
+                        console.error("Error getting location:", error);
+                    }
+                );
+            }
+        }
+        
+        // Configure backend with user information
+        async function configureBackend() {
+            const configData = {
+                sender_email: 'emergencyresponsesystem1@gmail.com',
+                sender_password: 'qsdu vnit fbpt okjw',
+                recipient_email: document.getElementById('emergencyEmail').value,
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                emergency_phone: document.getElementById('emergencyPhone').value,
+                address: document.getElementById('address').value,
+                latitude: userLatitude,
+                longitude: userLongitude,
+                maps_link: userLatitude && userLongitude ? 
+                    `https://www.google.com/maps?q=${userLatitude},${userLongitude}` : '#'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/configure`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(configData)
+                });
+                
+                const result = await response.json();
+                console.log("Configuration result:", result);
+                return result.status === 'success';
+            } catch (err) {
+                console.error("Error configuring backend:", err);
+                return false;
+            }
+        }
+        
+        // Start camera stream
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" }, 
+                    audio: false 
+                });
+                videoElement.srcObject = stream;
+                return true;
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+                alert("Could not access camera. Please check permissions.");
+                return false;
+            }
+        }
+        
+        // Stop camera stream
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+            }
+        }
+        
+        // Capture image from video
+        function captureImage() {
+            if (!videoElement.videoWidth) return null;
+            
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoElement, 0, 0);
+            
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
+        
+        // Convert base64 to blob for form data
+        function dataURLtoBlob(dataURL) {
+            const byteString = atob(dataURL.split(',')[1]);
+            const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            
+            return new Blob([ab], { type: mimeString });
+        }
+        
+        // Send image for analysis
+        async function sendImageForAnalysis(imageData) {
+            if (!imageData) return;
+            
+            const formData = new FormData();
+            formData.append('image', dataURLtoBlob(imageData));
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/image`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                console.log("Image analysis response:", result);
+                
+                if (result.status === 'success') {
+                    analysisResult.textContent = "Image processed successfully";
+                }
+            } catch (error) {
+                console.error("Error sending image for analysis:", error);
+            }
+        }
+        
+        // Check system status
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/status`);
+                const statusData = await response.json();
+                
+                // Display result in UI
+                if (statusData.status === 'running') {
+                    // Update UI based on system status
+                    analysisResult.textContent = `System running: ${statusData.image_queue_size} images in queue, ${statusData.audio_queue_size} audio files in queue`;
+                    
+                    // If there's threat detection in the queues, update the UI accordingly
+                    if (statusData.image_queue_size > 5 || statusData.audio_queue_size > 2) {
+                        safetyStatus.textContent = "Monitoring";
+                        safetyStatus.className = "status-badge badge-safe";
+                    }
+                }
+            } catch (error) {
+                console.error("Error checking system status:", error);
+            }
+        }
+        
+        // Start audio recording
+        async function startAudioRecording() {
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(audioStream, {
+                    mimeType: 'audio/webm;codecs=opus',
+                    audioBitsPerSecond: 128000
+                });
+                
+                audioChunks = [];
+                audioBuffer = [];
+                
+                mediaRecorder.addEventListener('dataavailable', event => {
+                    audioChunks.push(event.data);
+                    audioBuffer.push(event.data);
+                    
+                    // Check if we've collected 30 seconds of audio
+                    const currentTime = Date.now();
+                    if (currentTime - lastAudioSentTime >= AUDIO_SEND_INTERVAL) {
+                        sendAudioBuffer();
+                    }
+                });
+                
+                // Start recording
+                mediaRecorder.start(1000); // Collect data every second
+                return true;
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                alert("Could not access microphone. Please check permissions.");
+                return false;
+            }
+        }
+        
+        // Stop audio recording
+        function stopAudioRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+        }
+        
+        // Send audio buffer to server
+        async function sendAudioBuffer() {
+            if (audioBuffer.length === 0) return;
+            
+            const audioBlob = new Blob(audioBuffer, { type: 'audio/webm;codecs=opus' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                console.log("Audio buffer sent:", result);
+                
+                if (result.status === 'success') {
+                    audioBuffer = []; // Clear buffer after successful send
+                    lastAudioSentTime = Date.now();
+                }
+            } catch (error) {
+                console.error("Error sending audio buffer:", error);
+            }
+        }
+        
+        // Capture and process video frames
+        function processVideoFrames() {
+            if (!videoElement.videoWidth) return;
+            
+            const currentTime = Date.now();
+            
+            // Capture frame at 24fps
+            if (frameCount % (FRAMES_PER_SECOND / 24) === 0) {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(videoElement, 0, 0);
+                
+                const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                imageBuffer.push(imageData);
+            }
+            
+            // Send one frame per second
+            if (currentTime - lastImageSentTime >= IMAGE_SEND_INTERVAL) {
+                if (imageBuffer.length > 0) {
+                    sendImageForAnalysis(imageBuffer[imageBuffer.length - 1]);
+                    lastImageSentTime = currentTime;
+                }
+            }
+            
+            frameCount++;
+            
+            // Limit buffer size
+            if (imageBuffer.length > MAX_BUFFER_SIZE * FRAMES_PER_SECOND) {
+                imageBuffer = imageBuffer.slice(-MAX_BUFFER_SIZE * FRAMES_PER_SECOND);
+            }
+        }
+        
+        // Start monitoring
+        async function startMonitoring() {
+            // First configure the backend
+            const configured = await configureBackend();
+            if (!configured) {
+                alert("Failed to configure the backend system. Please try again.");
+                return;
+            }
+            
+            const cameraStarted = await startCamera();
+            if (!cameraStarted) return;
+            
+            const micStarted = await startAudioRecording();
+            if (!micStarted) {
+                stopCamera();
+                return;
+            }
+            
+            monitoring = true;
+            audioActive = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            toggleAudioBtn.disabled = true;
+            
+            // Update status indicators
+            statusDot.classList.add('active');
+            statusText.textContent = 'System Active';
+            audioStatus.textContent = "Audio detection: Active";
+            toggleAudioBtn.textContent = "Audio Detection Active";
+            
+            // Add system alert
+            addAlertToHistory('Monitoring system started');
+            
+            // Start capturing and processing frames
+            captureInterval = setInterval(processVideoFrames, 1000 / FRAMES_PER_SECOND);
+            
+            // Start checking system status
+            statusInterval = setInterval(() => {
+                checkSystemStatus();
+            }, 5000);
+        }
+        
+        // Stop monitoring
+        function stopMonitoring() {
+            stopCamera();
+            stopAudioRecording();
+            monitoring = false;
+            audioActive = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            toggleAudioBtn.disabled = false;
+            
+            // Clear intervals
+            clearInterval(captureInterval);
+            clearInterval(statusInterval);
+            
+            // Clear buffers
+            audioBuffer = [];
+            imageBuffer = [];
+            frameCount = 0;
+            
+            // Update status indicators
+            statusDot.classList.remove('active');
+            statusText.textContent = 'System Inactive';
+            audioStatus.textContent = "Audio detection: Inactive";
+            toggleAudioBtn.textContent = "Start Audio Detection";
+            
+            // Add system alert
+            addAlertToHistory('Monitoring system stopped');
+            
+            // Reset safety status
+            safetyStatus.textContent = "Safe";
+            safetyStatus.className = "status-badge badge-safe";
+            statusMessage.textContent = "";
+            statusMessage.classList.remove("emergency-active");
+            emergencyActive = false;
+        }
+        
+        // Add alert to history
+        function addAlertToHistory(message, isEmergency = false) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            const alertItem = document.createElement('li');
+            alertItem.className = isEmergency ? 'alert-item emergency-highlight' : 'alert-item';
+            
+            alertItem.innerHTML = `
+                <div class="alert-header">
+                    <span>${isEmergency ? 'Emergency Alert' : 'System Alert'}</span>
+                    <span class="alert-time">${timeString}</span>
+                </div>
+                <div class="alert-message">${message}</div>
+            `;
+            
+            alertHistory.prepend(alertItem);
+            
+            // Keep only the last 10 alerts
+            if (alertHistory.children.length > 10) {
+                alertHistory.removeChild(alertHistory.lastChild);
+            }
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', startMonitoring);
+        stopBtn.addEventListener('click', stopMonitoring);
+        toggleAudioBtn.addEventListener('click', startMonitoring);
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get user location
+            getUserLocation();
+            
+            // Add initial message to history
+            addAlertToHistory('System initialized and ready');
+        });
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (monitoring) {
+                stopMonitoring();
+            }
+            if (audioActive) {
+                stopAudioRecording();
+            }
+        });
+    </script>
+</body>
+</html>
