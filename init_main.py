@@ -12,17 +12,21 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import BytesIO
 from PIL import Image
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from ultralytics import YOLO
 import google.generativeai as genai
 from twilio.rest import Client
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}}, expose_headers=["Content-Type", "Authorization"])
 
 # Add this function before loading the model
-def ensure_model_exists(model_path="./models/yolo11n.pt"):
+def ensure_model_exists(model_path=os.getenv('YOLO_MODEL_PATH', "./models/yolov8n.pt")):
     """Check if YOLO model exists and download it if not."""
     model_dir = os.path.dirname(model_path)
     
@@ -40,7 +44,7 @@ def ensure_model_exists(model_path="./models/yolo11n.pt"):
             from ultralytics import YOLO
             
             # Download the model - ultralytics will automatically download from their repo
-            model = YOLO("yolov11n")  # This will download the model
+            model = YOLO("yolov8n")  # This will download the model
             
             # Save the model to the specified path
             model.export(format="pt", path=model_path)
@@ -54,19 +58,19 @@ def ensure_model_exists(model_path="./models/yolo11n.pt"):
 # Ensure model exists before loading
 ensure_model_exists()
 
-# Configure Gemini API
-GEMINI_API_KEY = ''
+# Configure Gemini API with API key from environment variables
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Load the YOLO model
-model = YOLO("./models/yolo11n.pt")
+model = YOLO(os.getenv('YOLO_MODEL_PATH', "./models/yolov8n.pt"))
 
 # Global variables for image and audio collection
 image_queue = queue.Queue()
 audio_queue = queue.Queue()
 processing_lock = threading.Lock()
 last_gemini_request_time = 0
-GEMINI_REQUEST_INTERVAL = 60  # Minimum seconds between Gemini API requests
+GEMINI_REQUEST_INTERVAL = int(os.getenv('GEMINI_REQUEST_INTERVAL', 60))  # Minimum seconds between Gemini API requests
 
 # File utility functions
 
@@ -156,7 +160,7 @@ def send_emergency_email(sender_email, sender_password, recipient_email, emergen
     """Send an emergency alert email using Gmail SMTP server"""
     # Create message container
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = f"Emergency Alert: {emergency_data.get('type', 'Threat Detection')}"
+    msg['Subject'] = "Emergency Alert"
     msg['From'] = sender_email
     msg['To'] = recipient_email
 
@@ -336,7 +340,7 @@ def analyze_images(images):
         
         # Initialize model with system instructions
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash-latest", 
+            model_name="gemini-2.0-flash", 
             generation_config=generation_config
         )
         
@@ -461,9 +465,9 @@ def send_threat_email(threat_type, assessment):
     """Send email alert for detected threats"""
     try:
         # Get email configuration from app config
-        sender_email = app.config.get('SENDER_EMAIL', 'emergencyresponsesystem1@gmail.com')
-        sender_password = app.config.get('SENDER_PASSWORD', 'qsdu vnit fbpt okjw')
-        recipient_email = app.config.get('RECIPIENT_EMAIL', 'shreyasksh6@gmail.com')
+        sender_email = app.config.get('SENDER_EMAIL', 'ustaaddevotees@gmail.com')
+        sender_password = app.config.get('SENDER_PASSWORD', 'xoyw swvd ycra mncl')
+        recipient_email = app.config.get('RECIPIENT_EMAIL', 'shreyassachink@gmail.com')
         
         # User information
         user_info = app.config.get('USER_INFO', {})
@@ -500,9 +504,9 @@ def configure():
         data = request.json
         
         # Update app configuration
-        app.config['SENDER_EMAIL'] = data.get('sender_email', app.config.get('SENDER_EMAIL', 'ustaaddevotees@gmail.com'))
-        app.config['SENDER_PASSWORD'] = data.get('sender_password', app.config.get('SENDER_PASSWORD', 'xoyw swvd ycra mncl'))
-        app.config['RECIPIENT_EMAIL'] = data.get('recipient_email', app.config.get('RECIPIENT_EMAIL', 'shreyasksh6@gmail.com'))
+        app.config['SENDER_EMAIL'] = data.get('sender_email', os.getenv('DEFAULT_SENDER_EMAIL'))
+        app.config['SENDER_PASSWORD'] = data.get('sender_password', os.getenv('DEFAULT_SENDER_PASSWORD'))
+        app.config['RECIPIENT_EMAIL'] = data.get('recipient_email', os.getenv('DEFAULT_RECIPIENT_EMAIL'))
         
         # User information
         app.config['USER_INFO'] = {
@@ -514,6 +518,9 @@ def configure():
             'longitude': data.get('longitude', 'N/A'),
             'maps_link': data.get('maps_link', '#')
         }
+
+        for key, value in app.config['USER_INFO'].items():
+            print(f"{key}: {value}")
         
         return jsonify({"status": "success", "message": "Configuration updated successfully"})
     except Exception as e:
@@ -523,18 +530,77 @@ def configure():
 def receive_image():
     """Receive image from client and add to processing queue"""
     try:
-        if 'image' not in request.files:
-            return jsonify({"status": "error", "message": "No image file provided"}), 400
+        print("Image upload request received")
         
-        file = request.files['image']
-        image = np.frombuffer(file.read(), np.uint8)
-        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        # Check if the request has files
+        if 'image' not in request.files:
+            # Check if it might be JSON data with base64 image
+            if request.content_type and 'application/json' in request.content_type:
+                try:
+                    print("Checking for JSON image data")
+                    data = request.json
+                    if not data or 'image' not in data:
+                        return jsonify({"status": "error", "message": "No image data in JSON"}), 400
+                        
+                    # Process base64 image
+                    image_data = data['image']
+                    # Remove data URL prefix if present
+                    if ',' in image_data:
+                        image_data = image_data.split(',')[1]
+                        
+                    # Decode base64
+                    image_bytes = base64.b64decode(image_data)
+                    image = np.frombuffer(image_bytes, np.uint8)
+                    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+                    
+                    if image is None:
+                        print("Could not decode base64 image")
+                        return jsonify({"status": "error", "message": "Invalid image data"}), 400
+                    
+                    print(f"Successfully decoded JSON image, shape: {image.shape}")
+                except Exception as e:
+                    print(f"Error processing JSON image: {e}")
+                    return jsonify({"status": "error", "message": f"Invalid image format: {str(e)}"}), 400
+            else:
+                print("No image file in request")
+                return jsonify({"status": "error", "message": "No image file provided"}), 400
+        else:
+            # Process multipart form data
+            file = request.files['image']
+            print(f"Received image file: {file.filename}, Content-Type: {file.content_type}")
+            
+            if file.filename == '':
+                print("Empty filename")
+                return jsonify({"status": "error", "message": "Empty file name"}), 400
+                
+            # Read and decode image
+            try:
+                image_bytes = file.read()
+                print(f"Image size: {len(image_bytes)} bytes")
+                image = np.frombuffer(image_bytes, np.uint8)
+                image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+                
+                if image is None:
+                    print("Could not decode image data")
+                    return jsonify({"status": "error", "message": "Could not decode image data"}), 400
+                
+                print(f"Successfully decoded image file, shape: {image.shape}")
+            except Exception as e:
+                print(f"Error processing image file: {e}")
+                return jsonify({"status": "error", "message": f"Error processing image: {str(e)}"}), 400
         
         # Add to processing queue
         image_queue.put(image)
+        queue_size = image_queue.qsize()
+        print(f"Image added to queue. Queue size: {queue_size}")
         
-        return jsonify({"status": "success", "message": "Image received for processing"})
+        return jsonify({
+            "status": "success", 
+            "message": "Image received for processing",
+            "queue_size": queue_size
+        })
     except Exception as e:
+        print(f"Error in receive_image: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/audio', methods=['POST'])
@@ -581,7 +647,7 @@ def status():
         "audio_queue_size": audio_queue.qsize()
     })
 
-@app.route('/sos', methods=['GET'])
+@app.route('/api/sos', methods=['GET'])
 def handle_data():
     # Extract query parameters
     name = request.args.get('name')
@@ -601,10 +667,10 @@ def handle_data():
         lat, lon = None, None
         maps_link = "Location unavailable"
 
-    # Twilio credentials
-    account_sid = ""
-    auth_token = ""
-    client = Client(account_sid, auth_token)
+    # Twilio credentials from environment variables
+    account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+    auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+    twilio_phone = os.getenv('TWILIO_PHONE_NUMBER')
     
     # Create emergency message with Google Maps link for SMS
     sms_message = f"EMERGENCY ALERT: {name} is in need of immediate assistance. Location: {maps_link}"
@@ -614,9 +680,10 @@ def handle_data():
     
     # Send emergency SMS first
     try:
+        client = Client(account_sid, auth_token)
         message = client.messages.create(
             body=sms_message,
-            from_="+19152333816",
+            from_=twilio_phone,
             to=emergency_contact,
         )
         message_sid = message.sid
@@ -627,8 +694,8 @@ def handle_data():
     try:
         call = client.calls.create(
             twiml=f"<Response><Say>{call_message}</Say></Response>",
-            to="+918660870744",
-            from_="+19152333816",
+            to=emergency_contact,
+            from_=twilio_phone,
         )
         call_sid = call.sid
     except Exception as e:
@@ -647,8 +714,61 @@ def handle_data():
     
     return jsonify(response)
 
+@app.route('/')
+def home():
+    return render_template('frontend3_copy.html')
 
-
+# Add a debug route to check queue status
+@app.route('/api/debug', methods=['GET'])
+def debug_info():
+    """Get debug information about the server and queues"""
+    image_count = image_queue.qsize()
+    audio_count = audio_queue.qsize()
+    
+    # Get sample sizes if available
+    image_sample = None
+    if not image_queue.empty():
+        try:
+            # Peek at the first image without removing it
+            with processing_lock:
+                if not image_queue.empty():
+                    image = list(image_queue.queue)[0]
+                    image_sample = {
+                        "shape": image.shape if hasattr(image, 'shape') else None,
+                        "type": str(type(image))
+                    }
+        except Exception as e:
+            image_sample = {"error": str(e)}
+    
+    audio_sample = None
+    if not audio_queue.empty():
+        try:
+            # Peek at the first audio without removing it
+            with processing_lock:
+                if not audio_queue.empty():
+                    audio = list(audio_queue.queue)[0]
+                    audio_sample = {
+                        "mime_type": audio.get("mime_type", "unknown"),
+                        "data_length": len(audio.get("data", b"")) if "data" in audio else 0,
+                        "type": str(type(audio))
+                    }
+        except Exception as e:
+            audio_sample = {"error": str(e)}
+    
+    return jsonify({
+        "status": "running",
+        "image_queue": {
+            "size": image_count,
+            "sample": image_sample
+        },
+        "audio_queue": {
+            "size": audio_count,
+            "sample": audio_sample
+        },
+        "last_api_request": time.time() - last_gemini_request_time,
+        "api_rate_limit": GEMINI_REQUEST_INTERVAL,
+        "server_time": time.time()
+    })
 
 # Initialize the server
 def initialize_server():
@@ -661,14 +781,19 @@ def initialize_server():
     print("Worker threads started")
 
 if __name__ == '__main__':
-    # Default configuration
-    app.config['SENDER_EMAIL'] = 'ustaaddevotees@gmail.com'
-    app.config['SENDER_PASSWORD'] = 'qsdu vnit fbpt okjw'
-    app.config['RECIPIENT_EMAIL'] = 'shreyasksh6@gmail.com'
+    # Default configuration from environment variables
+    app.config['SENDER_EMAIL'] = os.getenv('DEFAULT_SENDER_EMAIL')
+    app.config['SENDER_PASSWORD'] = os.getenv('DEFAULT_SENDER_PASSWORD')
+    app.config['RECIPIENT_EMAIL'] = os.getenv('DEFAULT_RECIPIENT_EMAIL')
     app.config['USER_INFO'] = {}
     
     # Initialize server and start worker threads
     initialize_server()
     
     # Run the Flask app
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    app.run(
+        host=os.getenv('SERVER_HOST', '0.0.0.0'),
+        port=int(os.getenv('SERVER_PORT', 5000)),
+        debug=os.getenv('DEBUG_MODE', 'True').lower() == 'true',
+        use_reloader=False
+    )
